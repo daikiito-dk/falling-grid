@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Falling Grid — Competitive Block Puzzle</title>
+<style>
+  *{box-sizing:border-box}
+  :root{--bg:#080b14;--panel:#111827cc;--panel2:#0f172acc;--line:#263244;--muted:#8b98ad;--text:#f8fafc;--accent:#8b5cf6;--accent2:#22d3ee}
+  body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 0%,#18213a 0,#0b1020 42%,#06080f 100%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;align-items:center;justify-content:center}
+  .wrap{display:grid;grid-template-columns:auto 250px;gap:26px;align-items:start;padding:28px;max-width:920px;width:100%}
+  .board-shell{position:relative;padding:10px;border:1px solid #334155;background:linear-gradient(145deg,#151c2c,#0b101b);border-radius:18px;box-shadow:0 28px 70px #000b,0 0 0 1px #ffffff08 inset}
+  canvas{display:block;background:#080d18;border:1px solid #334155;border-radius:10px;box-shadow:inset 0 0 0 1px #ffffff06}
+  #game{width:300px;height:600px}
+  .side{width:250px}
+  .brand{margin:2px 0 20px;padding:2px 4px}
+  .eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#94a3b8;font-weight:800;margin-bottom:6px}
+  h1{font-size:29px;line-height:1;margin:0;letter-spacing:-.04em;font-weight:900}
+  .tagline{margin-top:7px;color:#7f8ca3;font-size:12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .card{background:linear-gradient(145deg,#141c2bcc,#0d1420dd);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px;box-shadow:0 10px 24px #0003,inset 0 1px #ffffff08}
+  .label{font-size:10px;color:#8491a6;letter-spacing:.14em;font-weight:800}
+  .value{font-size:27px;font-weight:850;letter-spacing:-.03em;margin-top:3px}
+  .preview-card{padding:12px}
+  .preview-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+  .hint{font-size:9px;color:#65748c;letter-spacing:.08em}
+  #next,#hold{width:100%;height:76px;border:0;background:#080d18;box-shadow:none}
+  .status{min-height:70px;font-size:12px;line-height:1.75;color:#b7c3d5}
+  .status b{color:#fff}
+  .best-card{position:relative;overflow:hidden}.best-card:after{content:"";position:absolute;right:-24px;top:-24px;width:90px;height:90px;border:1px solid #22d3ee33;border-radius:50%;box-shadow:0 0 30px #22d3ee12}.best-meta{font-size:10px;color:#718096;margin-top:2px}
+  button{width:100%;border:1px solid #7c3aed;border-radius:11px;padding:12px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-weight:800;letter-spacing:.02em;cursor:pointer;box-shadow:0 8px 22px #4c1d9566;transition:.15s transform,.15s filter}
+  button:hover{filter:brightness(1.12);transform:translateY(-1px)}
+  .sound-on{border-color:#155e75;background:linear-gradient(135deg,#0891b2,#155e75);box-shadow:0 8px 22px #0e749066;font-size:11px}
+  .sound-off{border-color:#475569;background:#1e293b;box-shadow:none;color:#94a3b8}
+  .help{font-size:11px;line-height:1.85;color:#8f9db2}
+  .key{display:inline-block;min-width:23px;padding:1px 5px;margin-right:3px;border:1px solid #334155;border-radius:5px;background:#0b1220;color:#cbd5e1;text-align:center;font-size:10px}
+  .mode{display:inline-flex;align-items:center;gap:6px;font-size:9px;letter-spacing:.12em;font-weight:800;color:#a5b4fc;border:1px solid #3730a3;border-radius:999px;padding:4px 8px;background:#312e811c}
+  .dot{width:5px;height:5px;border-radius:50%;background:#22d3ee;box-shadow:0 0 8px #22d3ee}
+  @media(max-width:700px){.wrap{grid-template-columns:auto 190px;gap:12px;padding:14px}.side{width:190px}#game{width:240px;height:480px}.board-shell{padding:7px}.value{font-size:23px}.brand h1{font-size:23px}}
+  @media(max-width:500px){.wrap{grid-template-columns:1fr;justify-items:center}.side{width:min(300px,92vw)}.brand{text-align:center}.board-shell{width:max-content}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="board-shell"><canvas id="game" width="300" height="600"></canvas></div>
+  <aside class="side">
+    <div class="brand">
+      <div class="eyebrow">COMPETITIVE BLOCK PUZZLE</div>
+      <h1>Falling Grid</h1>
+      <div class="tagline"><span class="mode"><span class="dot"></span> MARATHON</span></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="label">SCORE</div><div id="score" class="value">0</div></div>
+      <div class="card"><div class="label">LINES</div><div id="lines" class="value">0</div></div>
+    </div>
+    <div class="card best-card"><div class="label">PERSONAL BEST</div><div id="best" class="value">0</div><div id="bestMeta" class="best-meta">—</div></div>
+    <div class="grid2">
+      <div class="card preview-card"><div class="preview-head"><div class="label">HOLD</div><div class="hint">C / SHIFT</div></div><canvas id="hold" width="120" height="76"></canvas></div>
+      <div class="card preview-card"><div class="preview-head"><div class="label">NEXT</div><div class="hint">QUEUE</div></div><canvas id="next" width="120" height="76"></canvas></div>
+    </div>
+    <div id="status" class="card status">B2B: OFF<br>COMBO: 0</div>
+    <div class="grid2"><button id="restart">NEW RUN</button><button id="sound" class="sound-on">SOUND ON</button></div>
+    <div class="card help">
+      <span class="key">←</span><span class="key">→</span> Move<br>
+      <span class="key">↑</span> Rotate　<span class="key">Z</span> Reverse<br>
+      <span class="key">↓</span> Soft drop　<span class="key">SPACE</span> Hard drop<br>
+      <span class="key">P</span> Pause
+    </div>
+  </aside>
+</div>
+<script>
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),ncanvas=document.getElementById("next"),nctx=ncanvas.getContext("2d"),hcanvas=document.getElementById("hold"),hctx=hcanvas.getContext("2d");
+ctx.imageSmoothingEnabled=false;nctx.imageSmoothingEnabled=false;hctx.imageSmoothingEnabled=false;
+const COLS=10,ROWS=20,S=30,colors=["#22d3ee","#3b82f6","#f97316","#facc15","#a855f7","#22c55e","#ef4444"];
+const names=["I","J","L","O","S","T","Z"];
+const shapes={I:[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],J:[[1,0,0],[1,1,1],[0,0,0]],L:[[0,0,1],[1,1,1],[0,0,0]],O:[[1,1],[1,1]],S:[[0,1,1],[1,1,0],[0,0,0]],T:[[0,1,0],[1,1,1],[0,0,0]],Z:[[1,1,0],[0,1,1],[0,0,0]]};
+const JLSTZ_KICKS={
+"0>1":[[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],"1>0":[[0,0],[1,0],[1,-1],[0,2],[1,2]],
+"1>2":[[0,0],[1,0],[1,-1],[0,2],[1,2]],"2>1":[[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+"2>3":[[0,0],[1,0],[1,1],[0,-2],[1,-2]],"3>2":[[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+"3>0":[[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],"0>3":[[0,0],[1,0],[1,1],[0,-2],[1,-2]]};
+const I_KICKS={
+"0>1":[[0,0],[-2,0],[1,0],[-2,-1],[1,2]],"1>0":[[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+"1>2":[[0,0],[-1,0],[2,0],[-1,2],[2,-1]],"2>1":[[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+"2>3":[[0,0],[2,0],[-1,0],[2,1],[-1,-2]],"3>2":[[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+"3>0":[[0,0],[1,0],[-2,0],[1,-2],[-2,1]],"0>3":[[0,0],[-1,0],[2,0],[-1,2],[2,-1]]};
+let board,piece,nextQueue,holdPiece,canHold,score,lines,combo,b2b,over,paused,drop,last=0,lastSpin=false,flash="",flashUntil=0;
+let highScores=JSON.parse(localStorage.getItem("fallingGridHighScores")||"[]");
+// Lightweight Web Audio SFX — no external files required.
+let audioCtx=null, soundOn=true;
+function audio(){if(!soundOn)return null; if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended')audioCtx.resume(); return audioCtx}
+function beep(freq,dur=.06,type='square',vol=.035,slide=0){const a=audio();if(!a)return;const o=a.createOscillator(),g=a.createGain(),now=a.currentTime;o.type=type;o.frequency.setValueAtTime(freq,now);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,freq+slide),now+dur);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(vol,now+.008);g.gain.exponentialRampToValueAtTime(.0001,now+dur);o.connect(g).connect(a.destination);o.start(now);o.stop(now+dur+.01)}
+function sfx(name){if(!soundOn)return;const a=audio();if(!a)return;switch(name){case'move':beep(180,.035,'square',.018);break;case'rotate':beep(420,.045,'triangle',.025,80);break;case'hold':beep(280,.06,'triangle',.03,180);break;case'drop':beep(110,.07,'sawtooth',.035,-35);break;case'lock':beep(150,.035,'square',.018);break;case'line':beep(520,.08,'triangle',.04,220);setTimeout(()=>beep(760,.1,'triangle',.035),45);break;case'tetris':[660,830,1040].forEach((f,i)=>setTimeout(()=>beep(f,.11,'triangle',.045),i*55));break;case'tspin':[520,700,940,1180].forEach((f,i)=>setTimeout(()=>beep(f,.09,'sine',.045),i*45));break;case'gameover':[320,250,190].forEach((f,i)=>setTimeout(()=>beep(f,.16,'sawtooth',.04),i*100));break}}
+
+function bag(){let a=[0,1,2,3,4,5,6];for(let i=a.length-1;i;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function makePiece(i){return {i,m:shapes[names[i]].map(r=>r.slice()),r:0,x:0,y:0}}
+function refill(){while(nextQueue.length<7)nextQueue.push(...bag())}
+function getBest(){return highScores[0]||{score:0,lines:0}}
+function renderBest(){const b=getBest();document.getElementById("best").textContent=b.score.toLocaleString();document.getElementById("bestMeta").textContent=b.score?`${b.lines} LINES • PERSONAL RECORD`:"NO RECORD YET"}
+function saveScore(){if(score<=0)return;highScores.push({score,lines,date:new Date().toISOString()});highScores.sort((a,b)=>b.score-a.score);highScores=highScores.slice(0,10);localStorage.setItem("fallingGridHighScores",JSON.stringify(highScores));renderBest()}
+function reset(){board=Array.from({length:ROWS},()=>Array(COLS).fill(0));nextQueue=[];refill();holdPiece=null;canHold=true;score=lines=0;combo=-1;b2b=false;over=paused=false;drop=0;lastSpin=false;flash="";spawn();updateUI()}
+function spawn(){refill();piece=makePiece(nextQueue.shift());refill();piece.x=Math.floor((COLS-piece.m[0].length)/2);piece.y=0;canHold=true;if(collide(piece)){over=true;saveScore();sfx("gameover")}}
+function collide(p,dx=0,dy=0,m=p.m){for(let y=0;y<m.length;y++)for(let x=0;x<m[y].length;x++)if(m[y][x]){let nx=p.x+x+dx,ny=p.y+y+dy;if(nx<0||nx>=COLS||ny>=ROWS||(ny>=0&&board[ny][nx]))return true}return false}
+function move(dx){if(!over&&!paused&&!collide(piece,dx)){piece.x+=dx;sfx("move")}}
+function soft(){if(!over&&!paused){if(!collide(piece,0,1))piece.y++;else lock()}}
+function hard(){if(!over&&!paused){while(!collide(piece,0,1))piece.y++;sfx("drop");lock()}}
+function rotate(dir){
+ if(over||paused||piece.i===3)return;
+ const old=piece.m,h=old.length,w=old[0].length;
+ const m=Array.from({length:w},()=>Array(h).fill(0));
+ if(dir>0)for(let y=0;y<h;y++)for(let x=0;x<w;x++)m[x][h-1-y]=old[y][x];
+ else for(let y=0;y<h;y++)for(let x=0;x<w;x++)m[w-1-x][y]=old[y][x];
+ const from=piece.r,to=(piece.r+(dir>0?1:3))%4;
+ const table=piece.i===0?I_KICKS:JLSTZ_KICKS;
+ const tests=table[`${from}>${to}`];
+ for(const [dx,dy] of tests){
+   // SRS tables use y-up; canvas uses y-down.
+   if(!collide(piece,dx,-dy,m)){piece.x+=dx;piece.y-=dy;piece.m=m;piece.r=to;lastSpin=piece.i===5;sfx("rotate");return}
+ }
+}
+function hold(){if(over||paused||!canHold)return;sfx("hold");let cur=piece.i;if(holdPiece===null){holdPiece=cur;spawn()}else{let t=holdPiece;holdPiece=cur;piece=makePiece(t);piece.x=Math.floor((COLS-piece.m[0].length)/2);piece.y=0;if(collide(piece)){over=true;saveScore();sfx("gameover")}}canHold=false;lastSpin=false}
+function merge(){piece.m.forEach((r,y)=>r.forEach((v,x)=>{if(v&&piece.y+y>=0)board[piece.y+y][piece.x+x]=piece.i+1}))}
+function tspin(){
+ if(!lastSpin||piece.i!==5)return 0;
+ const cx=piece.x+1,cy=piece.y+1;let c=0;
+ for(const [dx,dy] of [[-1,-1],[1,-1],[-1,1],[1,1]]){
+   const x=cx+dx,y=cy+dy;
+   if(x<0||x>=COLS||y<0||y>=ROWS||board[y][x])c++;
+ }
+ return c>=3?1:0;
+}
+function lock(){
+ const spin=tspin();merge();let n=0;
+ for(let y=ROWS-1;y>=0;y--)if(board[y].every(Boolean)){board.splice(y,1);board.unshift(Array(COLS).fill(0));n++;y++;}
+ const special=spin||n===4;
+ if(n>0){
+   combo++;
+   const base=spin?[0,800,1200,1600][n]:[0,100,300,500,800][n];
+   const bonus=(b2b&&special)?1.5:1;
+   score+=Math.floor(base*bonus)+(combo>0?50*combo:0);
+   b2b=special;lines+=n;
+   flash=spin?(n>=2?`T-SPIN DOUBLE`:n===1?`T-SPIN SINGLE`:`T-SPIN`):(n===4?`TETRIS`:`${n} LINE`);flashUntil=performance.now()+1000;
+   if(spin)sfx("tspin");else if(n===4)sfx("tetris");else sfx("line");
+ } else {combo=-1;flash="";sfx("lock");}
+ lastSpin=false;spawn();updateUI();
+}
+function ghostY(){let y=piece.y;while(!collide(piece,0,y-piece.y+1))y++;return y}
+function block(c,x,y,size=S,con=ctx,ghost=false){
+ con.save();
+ if(ghost){con.fillStyle=colors[c-1]+"18";con.fillRect(x+2,y+2,size-4,size-4);con.strokeStyle=colors[c-1]+"aa";con.lineWidth=2;con.strokeRect(x+3,y+3,size-6,size-6);}
+ else {con.fillStyle=colors[c-1];con.fillRect(x+1,y+1,size-2,size-2);con.strokeStyle="#ffffff30";con.lineWidth=1;con.strokeRect(x+1.5,y+1.5,size-3,size-3);}
+ con.restore();
+}
+function drawMini(con,p){con.clearRect(0,0,120,90);if(p===null)return;let m=shapes[names[p]],z=22,w=m[0].length,h=m.length,ox=(120-w*z)/2,oy=(90-h*z)/2;m.forEach((r,y)=>r.forEach((v,x)=>{if(v)block(p+1,ox+x*z,oy+y*z,z,con)}))}
+function draw(){ctx.clearRect(0,0,300,600);for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(board[y][x])block(board[y][x],x*S,y*S);if(piece){let gy=ghostY();piece.m.forEach((r,y)=>r.forEach((v,x)=>{if(v){if(piece.y+y>=0)block(piece.i+1,(piece.x+x)*S,(piece.y+y)*S);if(gy!==piece.y)block(piece.i+1,(piece.x+x)*S,(gy+y)*S,S,ctx,true)}}))}drawMini(nctx,nextQueue[0]);drawMini(hctx,holdPiece);if(over||paused){ctx.fillStyle="#0009";ctx.fillRect(0,0,300,600);ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 30px system-ui";ctx.fillText(over?"GAME OVER":"PAUSED",150,285);ctx.font="16px system-ui";ctx.fillText(over?"Rキーでリスタート":"Pキーで再開",150,320)}}
+function updateUI(){document.getElementById("score").textContent=score.toLocaleString();document.getElementById("lines").textContent=lines;renderBest();document.getElementById("status").innerHTML=`${flash?`<b>${flash}</b><br>`:""}B2B: <b>${b2b?"ON 🔥":"OFF"}</b><br>COMBO: <b>${Math.max(0,combo)}</b>`}
+addEventListener("keydown",e=>{if(["ArrowLeft","ArrowRight","ArrowDown","ArrowUp"," "].includes(e.key))e.preventDefault();if(e.key==="ArrowLeft")move(-1);else if(e.key==="ArrowRight")move(1);else if(e.key==="ArrowDown")soft();else if(e.key==="ArrowUp")rotate(1);else if(e.key==="z"||e.key==="Z")rotate(-1);else if(e.key===" ")hard();else if(e.key==="c"||e.key==="C"||e.key==="Shift")hold();else if(e.key.toLowerCase()==="p"&&!over){paused=!paused;updateUI();}else if(e.key.toLowerCase()==="r")reset()});
+document.getElementById("restart").onclick=()=>{sfx("hold");reset()};
+document.getElementById("sound").onclick=()=>{soundOn=!soundOn;const b=document.getElementById("sound");b.textContent=soundOn?"SOUND ON":"SOUND OFF";b.className=soundOn?"sound-on":"sound-off";if(soundOn){beep(660,.08,"triangle",.035)}};function loop(t){let dt=t-last;last=t;if(flash&&t>flashUntil)flash="";if(!over&&!paused){drop+=dt;let interval=Math.max(80,700-lines*12);if(drop>interval){soft();drop=0}}draw();requestAnimationFrame(loop)}renderBest();reset();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
